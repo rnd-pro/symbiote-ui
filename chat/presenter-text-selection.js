@@ -521,6 +521,7 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
 
   let baseReceipt = receipt(kind, match, options);
   baseReceipt.targetRect = selectionTargetRect(target);
+  baseReceipt.finalCursor = measureCursor(progressiveOffsets(baseReceipt, 1));
   let distancePx = selectionDistancePx(target, baseReceipt, measurementRange);
   let plan = createPresenterKinematicPlan({
     kind: 'underline',

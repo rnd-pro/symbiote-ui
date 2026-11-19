@@ -21,6 +21,8 @@ import {
   PRESENTER_MARKER_GEOMETRY_CONSTANTS,
   createPresenterMarkerPlan,
 } from './presenter-marker-geometry.js';
+import createPresenterHose from './presenter-hose.js';
+import createPresenterRig from './presenter-rig.js';
 
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
@@ -612,6 +614,8 @@ ${overlaySelector} .pc-cursor.is-inking{
 }
 ${overlaySelector} .pc-cursor.is-inking svg{display:block;}
 ${overlaySelector} .pc-cursor svg{display:block;overflow:visible;}
+${overlaySelector}.has-presenter-hose .pc-cursor>svg{opacity:0;}
+${overlaySelector}.has-presenter-hose .pc-click{display:none !important;}
 `;
 }
 
@@ -1542,7 +1546,12 @@ function projectFocusLayer(layer, timeMs, viewport) {
       PRESENTER_FRAME_MS,
       Number(layer.durationMs ?? layer.duration) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
     );
-    let elapsedMs = frameElapsed(timeMs, layer, durationMs);
+    // Continuous layers interpolate the reveal at the display rate; scheduled
+    // layers keep the 30 FPS projector floor. A time-stretched gesture can opt
+    // in so the slowdown stays smooth instead of collapsing into plateaus.
+    let elapsedMs = layer.continuous
+      ? Math.min(durationMs, rawElapsedMs)
+      : frameElapsed(timeMs, layer, durationMs);
     let progress = Math.min(1, elapsedMs / durationMs);
     let kinematicFrame = layer.kinematics
       ? samplePresenterKinematicPlan(layer.kinematics, elapsedMs)
@@ -1802,8 +1811,12 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
   };
 }
 
-export function createPresenterCursor(doc = typeof document !== 'undefined' ? document : null) {
+export function createPresenterCursor(
+  doc = typeof document !== 'undefined' ? document : null,
+  { resolveHoseAnchor, presenterRig = null } = {},
+) {
   if (!hasDocument(doc)) return inertCursor();
+  let win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
 
   ensureStyle(doc);
 
@@ -1841,8 +1854,17 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   overlay.appendChild(clickHalo);
   overlay.appendChild(cursor);
   doc.body.appendChild(overlay);
+  // `presenterRig` swaps the single hose for the experimental flying avatar
+  // with two arms; both expose the same hose surface.
+  let hose = resolveHoseAnchor
+    ? (presenterRig
+      ? createPresenterRig(overlay, resolveHoseAnchor, presenterRig)
+      : createPresenterHose(overlay, resolveHoseAnchor))
+    : null;
+  if (hose) overlay.classList.add('has-presenter-hose');
+  let MutationObserverClass = win?.MutationObserver || globalThis.MutationObserver;
+  let hoseVisibilityObserver = null;
 
-  let win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
   let nowMs = () =>
     win && win.performance && typeof win.performance.now === 'function'
       ? win.performance.now()
@@ -1891,6 +1913,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   let renderLoopId = null;
 
   function defaultCursorPoint(viewport) {
+    let rest = hose?.getRestPoint?.();
+    if (rest) return clampPresenterPoint(rest, viewport);
     return clampPresenterPoint({
       x: viewport.width * 0.5,
       y: viewport.height * 0.8,
@@ -2072,10 +2096,16 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     clickHalo.style.display = 'none';
   }
 
+  let gripHeld = false;
+  function setHoseGrip(closed) {
+    if (closed || !gripHeld) hose?.setGrip(closed);
+  }
+
   function setCursor(x, y) {
     cursorX = x;
     cursorY = y;
     cursorPositioned = true;
+    hose?.move(x, y);
     cursor.style.opacity = '1';
     cursor.style.transform = `translate(${x}px, ${y}px)`;
   }
@@ -2242,14 +2272,26 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         }
         fireNativeClick(el, zone);
         activeLayers.click = { active: true, x: zone.x, y: zone.y, startTime: 0 };
+        hose?.click(zone.x, zone.y);
+        setHoseGrip(true);
         activeLayers.cursor = {
           active: true,
           x: zone.x,
           y: zone.y,
           startTime: 0,
-          duration: CLICK_PRESS_MS + CLICK_FADE_MS,
+          // The post-click hold is the caller's authored-budget decision
+          // (spare slot time), never a fixed addition: direct clicks drive
+          // authored cue gestures whose hard deadline covers this whole
+          // action, and a fixed hold blows tight slots past their deadline.
+          duration: CLICK_PRESS_MS + CLICK_FADE_MS
+            + Math.max(0, Number(opts?.holdMs) || 0),
         };
         currentActionResolver = (rippleReceipt) => {
+          setHoseGrip(false);
+          if (rippleReceipt.status === 'settled') {
+            hideMarqueeFrame();
+            hose?.returnHome();
+          }
           settle(opts);
           resolve({
             actionId,
@@ -2302,6 +2344,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         rect: focusRect,
         ...(mode === 'rectangle-selection' ? {} : { duration: durationMs }),
         ...(mode === 'rectangle-selection' ? {} : { kinematics: frameKinematics }),
+        ...(frame.continuous === true ? { continuous: true } : {}),
         mode,
       },
       marker: null,
@@ -2361,6 +2404,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
           maxSpeedPxPerMs: frameKinematics.limits.maxSpeedPxPerMs,
         },
       cursor: frameCursor,
+      finalCursor: {
+        x: focusRect.left + focusRect.width,
+        y: focusRect.top + focusRect.height,
+        visible: true,
+      },
     };
     if (frame.planOnly === true) return result;
 
@@ -2575,8 +2623,14 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       clickHalo.style.transform = `translate(-50%, -50%) scale(${projected.click.scale})`;
       clickHalo.style.opacity = projected.click.opacity;
       clickHalo.style.display = 'block';
+      hose?.presentClick(
+        projected.click.x, projected.click.y, elapsedMs / PRESENTER_CLICK_DURATION_MS * 550,
+      );
+      setHoseGrip(true);
     } else {
       clickHalo.style.display = 'none';
+      hose?.presentClick(zone.x, zone.y, 550);
+      setHoseGrip(false);
     }
 
     return result;
@@ -2822,7 +2876,9 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
           y: rest.y,
         };
 
+        setHoseGrip(true);
         currentActionResolver = (r) => {
+          setHoseGrip(false);
           settle(opts);
           resolve(r);
         };
@@ -3034,6 +3090,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     ink.classList.toggle('is-inking', Boolean(visibleInkPathD));
 
     cursor.classList.toggle('is-inking', Boolean(!suppressUnsafe && activeAnnotation && !activeAnnotation.completed));
+    setHoseGrip(Boolean(!suppressUnsafe && activeAnnotation && !activeAnnotation.completed));
     let evidenceAnnotation = activeAnnotation;
     let strokePoints = suppressUnsafe ? layout.fullPathSamples : activeAnnotation.points;
     let cursorPoint = suppressUnsafe ? layout.fullCursor : activeAnnotation.cursor;
@@ -3149,9 +3206,14 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     hideMarqueeFrame();
     clickHalo.style.display = 'none';
     cursor.classList.remove('is-inking');
+    gripHeld = false;
+    hose?.setGrip(false);
     if (preservedCursor) holdCursor(resolveViewport());
-    else cursor.style.opacity = '0';
-    let preserved = preservedInk || preservedCursor;
+    else if (hose) {
+      cursor.style.opacity = '1';
+      hose.returnHome();
+    } else cursor.style.opacity = '0';
+    let preserved = preservedInk || preservedCursor || Boolean(hose);
     overlay.classList.toggle('is-visible', preserved);
     overlay.classList.toggle('is-paused', !preserved);
   }
@@ -3164,10 +3226,89 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelClick();
     abortCurrentAction();
     disposed = true;
+    hoseVisibilityObserver?.disconnect();
+    hose?.dispose();
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
 
   return {
+    planApproach(target, receipt) {
+      let viewport = resolveViewport();
+      let from = hose?.getPosition() || currentCursorPoint(viewport);
+      let rect = target.getBoundingClientRect();
+      let to = receipt?.cursor || receipt?.hotspot || { x: rect.left, y: rect.top };
+      let travel = presenterTravelLayer(from, to, 0);
+      let hinted = false;
+      return {
+        durationMs: travel.duration,
+        render(elapsedMs) {
+          let projected = projectPresenterState({ cursor: travel }, elapsedMs, 0, viewport);
+          showOverlay();
+          if (!hinted) {
+            hinted = true;
+            hose?.setTarget?.(to);
+          }
+          setCursor(projected.cursor.x, projected.cursor.y);
+        },
+      };
+    },
+    planHomeReturn(target, receipt) {
+      let point = receipt?.cursor || receipt?.hotspot;
+      if (!point && target?.getBoundingClientRect) {
+        let rect = target.getBoundingClientRect();
+        point = { x: rect.left, y: rect.bottom };
+      }
+      let plan = hose?.planHomeReturn?.(point);
+      if (!plan?.destination || !point) return { durationMs: 0, destination: null };
+      let destination = plan.destination;
+      let distance = Math.hypot(destination.x - point.x, destination.y - point.y);
+      let durationMs = Math.max(
+        plan.durationMs,
+        Math.ceil(1.5 * distance / 0.55),
+        Math.ceil(Math.sqrt(6 * distance / 0.0011)),
+      );
+      return {
+        durationMs,
+        destination,
+        render(elapsedMs) {
+          let progress = Math.max(0, Math.min(1, elapsedMs / durationMs));
+          let eased = progress * progress * (3 - 2 * progress);
+          showOverlay();
+          setCursor(
+            point.x + (destination.x - point.x) * eased,
+            point.y + (destination.y - point.y) * eased,
+          );
+          return { status: progress === 1 ? 'home' : 'returning' };
+        },
+      };
+    },
+    setGrip(closed) {
+      if (!disposed) hose?.setGrip(closed === true);
+    },
+    // While held, the claw ignores the per-gesture release signals: the
+    // attention controller opens it itself right before the hose retracts.
+    // Swap the hose for the flying presenter (or back) without recreating
+    // the cursor, so a running show keeps its gesture state.
+    setPresenterRig(options) {
+      if (disposed || !resolveHoseAnchor) return;
+      hose?.dispose();
+      hose = options
+        ? createPresenterRig(overlay, resolveHoseAnchor, options)
+        : createPresenterHose(overlay, resolveHoseAnchor);
+      overlay.classList.add('has-presenter-hose');
+      if (cursorPositioned) hose.move(cursorX, cursorY);
+    },
+    holdGrip(held) {
+      gripHeld = held === true;
+    },
+    returnHome() {
+      if (!hose || disposed) return Promise.resolve(Object.freeze({ status: 'home' }));
+      showOverlay();
+      return hose.returnHome();
+    },
+    whenHome() {
+      return hose?.whenHome?.() || null;
+    },
     moveTo,
     markElement,
     annotateElement,

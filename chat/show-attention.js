@@ -8,6 +8,11 @@ export const SHOW_ATTENTION_TERMINAL_VERSION = 'show-attention-terminal-v2';
 export const SHOW_ATTENTION_PROVIDER_VERSION = 'show-attention-provider-v1';
 
 const PLAN_RECT_FIELDS = Object.freeze(['targetRect', 'rect', 'drawRect', 'frameRect']);
+// The owner asked the selection to stay parked for three seconds after the
+// action before it is released. The delay is housekeeping outside the
+// supervised gesture window: the engine still sees `settled` at the authored
+// slot, so a longer legibility pause cannot push a cue past its deadline.
+const SELECTION_RELEASE_DELAY_MS = 3000;
 const ADMISSION_REASON_MESSAGES = Object.freeze({
   'within-budget': 'the provider plan fits the explicit hard budget',
   'budget-exceeded': 'the provider plan exceeds the explicit hard budget',
@@ -445,6 +450,9 @@ export class ShowAttentionController {
       animation.timeoutId = null;
     }
     if (this._animation === animation) this._animation = null;
+    // A gesture that already delivered its terminal at the window end keeps
+    // that terminal; the housekeeping return must not report a second one.
+    if (animation.terminal) return animation.terminal;
     let terminal = providerTerminal(
       status,
       observedAt,
@@ -494,14 +502,42 @@ export class ShowAttentionController {
 
   _completeVisual(animation, observedAt) {
     if (animation.finished) return;
-    animation.onSettled?.(animation.receipt);
-    animation.onMilestone?.(providerMilestone(
-      'settled',
+    if (!animation.settled) {
+      animation.settled = true;
+      animation.onSettled?.(animation.receipt);
+      animation.onMilestone?.(providerMilestone(
+        'settled',
+        observedAt,
+        animation.admission,
+        animation.receipt,
+      ));
+      // The engine's hard deadline supervises the authored gesture window. The
+      // planned home return is housekeeping that keeps rendering on the
+      // attention clock afterwards, so the terminal is delivered at the window
+      // end instead of waiting for the return travel.
+      animation.terminal = providerTerminal(
+        'completed',
+        observedAt,
+        animation.admission,
+        animation.receipt,
+        {
+          startedAt: animation.startedAt,
+          firstFrameAt: animation.firstFrameAt,
+          elapsedMs: animation.elapsedMs,
+          durationMs: animation.durationMs,
+          terminalReason: 'settled',
+        },
+      );
+      animation.resolve(animation.terminal);
+      animation.onTerminal?.(animation.terminal);
+    }
+    if (animation.elapsedMs < animation.durationMs) return;
+    this._finishAnimation(
+      animation,
+      'completed',
       observedAt,
-      animation.admission,
-      animation.receipt,
-    ));
-    this._finishAnimation(animation, 'completed', observedAt, 'settled');
+      'settled',
+    );
   }
 
   _settleStandalone(status, target, admission, receipt, terminalReason, onTerminal) {
@@ -553,9 +589,16 @@ export class ShowAttentionController {
     onMilestone,
     onTerminal,
     alreadyRendered = false,
+    gestureWindowMs = null,
   }) {
     let host = resolveFrameHost(target);
     let durationMs = receiptDuration(receipt);
+    // The supervised gesture window ends when the authored action and its hold
+    // end; a planned home return keeps rendering afterwards on the same clock
+    // without extending the window the engine deadline measures.
+    let windowMs = Number.isFinite(gestureWindowMs) && gestureWindowMs > 0
+      ? Math.min(gestureWindowMs, durationMs)
+      : durationMs;
     let resolve;
     let settled = new Promise((done) => { resolve = done; });
     let animation = {
@@ -569,6 +612,8 @@ export class ShowAttentionController {
       firstFrameAt: null,
       elapsedMs: 0,
       durationMs,
+      gestureWindowMs: windowMs,
+      settled: false,
       progress: receiptProgress(receipt),
       receipt,
       resolve,
@@ -619,7 +664,6 @@ export class ShowAttentionController {
       }
       return animation.receipt;
     }
-
     this._animation = animation;
 
     let armFallback = () => {
@@ -675,12 +719,19 @@ export class ShowAttentionController {
         return;
       }
       if (this._animation !== animation || animation.finished || animation.paused) return;
-      if (animation.elapsedMs >= durationMs || animation.progress >= 1) {
+      // The gesture settles when its authored window ends, not when the drawing
+      // completes: a finished drawing is still held for its legibility second.
+      if (animation.elapsedMs >= animation.gestureWindowMs) {
         try {
           this._completeVisual(animation, observedAt);
         } catch (error) {
           this._failAnimation(animation, observedAt, 'provider-settlement-failed', error);
+          return;
         }
+        if (animation.finished) return;
+      }
+      if (animation.elapsedMs >= durationMs) {
+        this._finishAnimation(animation, 'completed', observedAt, 'settled');
         return;
       }
       animation.frameId = host.request(tick);
@@ -706,7 +757,8 @@ export class ShowAttentionController {
       }
       changed = true;
     }
-    if (this._transient?.mode === 'native-selection') {
+    if (this._transient?.mode === 'native-selection'
+      && animation?.render?.returnStarted !== true) {
       let receipt = this._transient.handle?.refresh?.()
         || this._transient.handle?.receipt;
       this._transient.renderCursor?.(receipt);
@@ -906,6 +958,7 @@ export class ShowAttentionController {
     let nativeCursorRenderer = null;
     let planReceipt;
     let render;
+    let gestureWindowMs = null;
     let planOnly = requiresAdmission;
     try {
       if (planningError) throw planningError;
@@ -960,10 +1013,11 @@ export class ShowAttentionController {
           presenterFrame(request, { elapsedMs: 0, preserveInk: true, planOnly }),
         ) || { presented: false, reason: 'cursor-unavailable' };
       } else {
-        render = (elapsedMs) => this.cursor?.presentFocusFrame?.(target, presenterFrame(request, {
+        render = (elapsedMs, extra = {}) => this.cursor?.presentFocusFrame?.(target, presenterFrame(request, {
           elapsedMs,
           preserveInk: true,
           mode: mode === 'frame' ? 'frame' : 'cursor',
+          ...extra,
         })) || { presented: false, reason: 'cursor-unavailable' };
         planReceipt = this.cursor?.presentFocusFrame?.(target, presenterFrame(request, {
           elapsedMs: 0,
@@ -971,6 +1025,173 @@ export class ShowAttentionController {
           mode: mode === 'frame' ? 'frame' : 'cursor',
           planOnly,
         })) || { presented: false, reason: 'cursor-unavailable' };
+      }
+      if (planReceipt?.presented && this.cursor?.planApproach) {
+        let approach = this.cursor.planApproach(target, planReceipt);
+        let actionRender = render;
+        let actionDuration = receiptDuration(planReceipt);
+        let holdDuration = 1000;
+        let pacedActionDuration = actionDuration;
+        let actionAndHoldDuration = actionDuration + holdDuration;
+        let finalPathPoint = Array.isArray(planReceipt.pathSamples)
+          ? planReceipt.pathSamples.at(-1)
+          : null;
+        let finalPoint = planReceipt.finalCursor || finalPathPoint;
+        let returnOriginReceipt = finalPoint
+          ? { ...planReceipt, cursor: finalPoint }
+          : planReceipt;
+        let homePlan = this.cursor.planHomeReturn?.(target, returnOriginReceipt) || { durationMs: 0 };
+        let returnDuration = Math.max(0, Number(homePlan.durationMs) || 0);
+        let hasHomeReturn = returnDuration > 0;
+        let returnStartsAt = approach.durationMs + actionAndHoldDuration;
+        let totalDuration = returnStartsAt + returnDuration;
+        let paceFactor = 1;
+        let budgetMs = Number(request.budgetMs);
+        // A gesture that does not require provider admission (a click) still
+        // has an authored slot: the engine measures its hard deadline against
+        // that slot, so the provider must be able to fit the hold into it.
+        let fitBudgetMs = Number.isFinite(budgetMs) ? budgetMs : Number(request.holdBudgetMs);
+        let pacedSelection = mode === 'frame' || mode === 'native-selection';
+        if (Number.isFinite(fitBudgetMs) && Number.isFinite(actionDuration) && actionDuration > 0) {
+          if (pacedSelection) {
+            // The authored slot carries the approach, the action and the
+            // post-action legibility hold. The hold keeps its full second
+            // whenever the slot has room, and the action is stretched to fill
+            // what is left; when the slot cannot carry both, the action keeps
+            // its natural speed instead of being compressed.
+            holdDuration = Math.max(
+              0,
+              Math.min(holdDuration, fitBudgetMs - approach.durationMs - actionDuration),
+            );
+            let roomForAction = fitBudgetMs - approach.durationMs - holdDuration;
+            if (roomForAction >= actionDuration) {
+              pacedActionDuration = roomForAction;
+              paceFactor = pacedActionDuration / actionDuration;
+            }
+          } else {
+            // A click or a marker has no legibility second to protect: the spare
+            // budget becomes the hold, and the supervised gesture window stays
+            // inside the authored slot (the engine deadline is measured on it).
+            holdDuration = Math.max(
+              0,
+              fitBudgetMs - approach.durationMs - actionDuration - returnDuration,
+            );
+          }
+          actionAndHoldDuration = pacedActionDuration + holdDuration;
+          returnStartsAt = approach.durationMs + actionAndHoldDuration;
+          totalDuration = returnStartsAt + returnDuration;
+          gestureWindowMs = returnStartsAt;
+        }
+        // The selection is released only after the full post-action delay; the
+        // in-window hold above counts toward it and the rest runs after the
+        // settled terminal, before the planned home return.
+        let releaseDelayMs = pacedSelection
+          ? Math.max(0, SELECTION_RELEASE_DELAY_MS - holdDuration)
+          : 0;
+        let releaseStartsAt = returnStartsAt + releaseDelayMs;
+        totalDuration = releaseStartsAt + returnDuration;
+        let returnStarted = false;
+        let actionRendered = false;
+        let actionCompleted = false;
+        // A time-stretched frame must interpolate continuously, else the 30 FPS
+        // projector floor becomes multi-hundred-millisecond plateaus (jerks).
+        let actionExtras = mode === 'frame' && paceFactor !== 1 ? { continuous: true } : {};
+        let beginReturn = () => {
+          if (returnStarted) return;
+          returnStarted = true;
+          this._transient?.handle?.clear?.();
+          this.cursor?.clear?.({
+            preserveInk: true,
+            preserveCursor: typeof homePlan.render === 'function' || !hasHomeReturn,
+          });
+        };
+        let lastActionReceipt = planReceipt;
+        render = (elapsedMs) => {
+          if (elapsedMs < releaseStartsAt) returnStarted = false;
+          if (elapsedMs < approach.durationMs) {
+            actionCompleted = false;
+            approach.render(elapsedMs);
+            return { ...planReceipt, durationMs: totalDuration, progress: elapsedMs / totalDuration };
+          }
+          approach.render(approach.durationMs);
+          let actionElapsedMs = elapsedMs - approach.durationMs;
+          let naturalActionElapsedMs = actionElapsedMs / paceFactor;
+          if (naturalActionElapsedMs < actionDuration) {
+            actionCompleted = false;
+            let result = actionRender(naturalActionElapsedMs, actionExtras);
+            actionRendered = true;
+            lastActionReceipt = result;
+            return { ...result, durationMs: totalDuration, progress: Math.min(1, elapsedMs / totalDuration) };
+          }
+          if (!actionCompleted) {
+            lastActionReceipt = actionRender(actionDuration, actionExtras);
+            actionRendered = true;
+            actionCompleted = true;
+          }
+          if (actionElapsedMs < actionAndHoldDuration) {
+            let result = mode === 'click' && this.cursor?.presentCursorFrame
+              ? this.cursor.presentCursorFrame(target, presenterFrame(request, {
+                elapsedMs: actionElapsedMs,
+                durationMs: actionAndHoldDuration,
+                point: planReceipt.cursor || planReceipt.hotspot,
+                preserveInk: true,
+              }))
+              : actionRender(actionDuration, actionExtras);
+            actionRendered = true;
+            lastActionReceipt = result;
+            return { ...result, durationMs: totalDuration, progress: Math.min(1, elapsedMs / totalDuration) };
+          }
+          if (elapsedMs < releaseStartsAt) {
+            // Post-settle linger: the settled terminal is already delivered at
+            // the window end, but the selection stays parked for the rest of
+            // its legibility delay before the marquee is cleared and the
+            // cursor travels home.
+            lastActionReceipt = actionRender(actionDuration, actionExtras);
+            actionRendered = true;
+            return {
+              ...lastActionReceipt,
+              durationMs: totalDuration,
+              progress: Math.min(1, elapsedMs / totalDuration),
+              phase: 'holding',
+            };
+          }
+          if (!actionRendered || Number(lastActionReceipt.elapsedMs) !== actionDuration) {
+            lastActionReceipt = actionRender(actionDuration, actionExtras);
+            actionRendered = true;
+          }
+          beginReturn();
+          homePlan.render?.(Math.min(returnDuration, elapsedMs - releaseStartsAt));
+          return {
+            ...lastActionReceipt,
+            durationMs: totalDuration,
+            progress: Math.min(1, elapsedMs / totalDuration),
+            phase: 'returning-home',
+          };
+        };
+        // The presenter claw closes when the action starts and stays closed
+        // through the legibility hold; it opens only right before the hose
+        // retracts, and stays open while travelling and returning home.
+        let phasedRender = render;
+        render = (elapsedMs) => {
+          let result = phasedRender(elapsedMs);
+          let closed = elapsedMs >= approach.durationMs && elapsedMs < releaseStartsAt;
+          this.cursor?.holdGrip?.(closed);
+          this.cursor?.setGrip?.(closed);
+          return result;
+        };
+        Object.defineProperty(render, 'returnStarted', { get: () => returnStarted });
+        Object.defineProperty(render, 'hasHomeReturn', { value: hasHomeReturn });
+        Object.defineProperty(render, 'logicalReturn', {
+          value: typeof homePlan.render === 'function' || !hasHomeReturn,
+        });
+        planReceipt = {
+          ...planReceipt,
+          durationMs: totalDuration,
+          // Admission compares the action slot to the authored budget; travel
+          // and hold are infrastructure and must not make a cue inadmissible.
+          plannedDurationMs: pacedActionDuration,
+          progress: 0,
+        };
       }
     } catch (error) {
       if (!requiresAdmission) throw error;
@@ -1110,6 +1331,7 @@ export class ShowAttentionController {
       onMilestone,
       onTerminal,
       alreadyRendered: !requiresAdmission && mode !== 'native-selection',
+      gestureWindowMs,
     });
     return Object.freeze({
       ...receipt,

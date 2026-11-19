@@ -175,6 +175,85 @@ test('attention controller advances frame and marker receipts to one settled vis
   await attention.whenSettled();
 });
 
+test('click attention includes approach and hold, clears the frame before return, and settles after home', async () => {
+  let scheduler = createFrameScheduler();
+  let events = [];
+  let completeHome;
+  let home = new Promise((resolve) => { completeHome = resolve; });
+  let target = animatedTarget(scheduler.view, 'click-target');
+  let cursor = {
+    clear: () => events.push('clear'),
+    planApproach: () => ({
+      durationMs: 300,
+      render: (elapsedMs) => events.push(`approach:${elapsedMs}`),
+    }),
+    planHomeReturn: () => ({ durationMs: 400 }),
+    presentClickFrame: (_target, frame) => {
+      events.push(`click:${frame.elapsedMs}`);
+      return {
+        presented: true,
+        visible: true,
+        durationMs: 200,
+        cursor: { x: 40, y: 50 },
+        hotspot: { x: 40, y: 50 },
+      };
+    },
+    presentCursorFrame: (_target, frame) => {
+      events.push(`hold:${frame.point.x},${frame.point.y}`);
+      return { presented: true, visible: true, cursor: frame.point };
+    },
+    whenHome: () => home,
+  };
+  let settled = false;
+  let attention = new ShowAttentionController({ cursor, resolveTarget: () => target });
+
+  attention.present({
+    mode: 'click',
+    targetId: 'click-target',
+  });
+  attention.whenSettled().then(() => { settled = true; });
+  scheduler.step(1000);
+  scheduler.step(1300);
+  scheduler.step(1500);
+  assert.ok(events.includes('click:0'), 'the click starts only after the planned approach');
+  assert.ok(events.includes('hold:40,50'), 'the cursor stays on the click target during the one-second hold');
+  scheduler.step(2500);
+  assert.ok(events.filter((event) => event === 'clear').length >= 2, 'the click frame is cleared before the return phase');
+  assert.equal(settled, false, 'the gesture is not settled while the return is in flight');
+  scheduler.step(2900);
+  assert.equal(settled, false, 'elapsed return budget alone cannot settle before home');
+
+  completeHome({ status: 'home' });
+  let terminal = await attention.whenSettled();
+  assert.equal(terminal.status, 'completed');
+});
+
+test('marker return budget starts at the final authored path point', () => {
+  let scheduler = createFrameScheduler();
+  let returnOrigin = null;
+  let target = animatedTarget(scheduler.view, 'marker-target');
+  let cursor = {
+    clear() {},
+    presentAnnotationFrame: () => ({
+      presented: true,
+      durationMs: 300,
+      cursor: { x: 10, y: 20 },
+      pathSamples: [{ x: 10, y: 20 }, { x: 40, y: 50 }],
+    }),
+    planApproach: () => ({ durationMs: 100, render() {} }),
+    planHomeReturn: (_target, receipt) => {
+      returnOrigin = receipt.cursor;
+      return { durationMs: 500 };
+    },
+  };
+  let attention = new ShowAttentionController({ cursor, resolveTarget: () => target });
+
+  attention.present({ mode: 'marker', targetId: 'marker-target', marker: 'oval' });
+
+  assert.deepEqual(returnOrigin, { x: 40, y: 50 });
+  attention.dispose();
+});
+
 test('attention controller owns native-selection animation and cancels it on replacement', async () => {
   let scheduler = createFrameScheduler();
   let frames = [];
