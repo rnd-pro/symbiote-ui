@@ -532,8 +532,16 @@ ${overlaySelector} .pc-ants{
   stroke-dasharray:4 4;
   shape-rendering:crispEdges;
 }
-${overlaySelector} .pc-ants-black{stroke:#000;}
-${overlaySelector} .pc-ants-white{stroke:#fff;}
+${overlaySelector} .pc-ants-black{stroke:#000;animation:pc-ants-march-black 0.6s linear infinite;}
+${overlaySelector} .pc-ants-white{stroke:#fff;animation:pc-ants-march-white 0.6s linear infinite;}
+/* The dashes keep circulating for as long as the frame is shown, including the
+   post-action hold when the gesture clock has stopped. The white dashes sit half
+   a period behind the black ones. */
+@keyframes pc-ants-march-black{from{stroke-dashoffset:0;}to{stroke-dashoffset:-8;}}
+@keyframes pc-ants-march-white{from{stroke-dashoffset:-4;}to{stroke-dashoffset:-12;}}
+@media (prefers-reduced-motion:reduce){
+  ${overlaySelector} .pc-ants-black,${overlaySelector} .pc-ants-white{animation:none;}
+}
 ${overlaySelector} .pc-focus-handle{
   position:absolute;
   top:0;
