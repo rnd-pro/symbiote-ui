@@ -72,6 +72,9 @@ const MOUTH_LETTER_MS = 80;
 const MOUTH_HOLD_MS = 160;
 // The mouth leads the narration clock by this much (the sound reaches the ear later).
 const MOUTH_LEAD_MS = 0;
+// The narration clock counts as running while its position moved within this long;
+// between two scenes it stands still while the next sound loads.
+const CLOCK_STALL_MS = 180;
 
 // Face mask: while the show plays the presenter wears a faceplate (dark metal, the
 // site's orange accent, slanted eye slits); on pause it lifts. The eyes in the
@@ -207,7 +210,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
   // Arm 0 leaves the left connector and reaches left; arm 1 mirrors it. Each
   // hose is anchored on its own connector, so a tilted, bobbing body still
   // has its hoses leave exactly from the connectors.
-  let arms = ['left', 'right'].map((side, index) => createPresenterHose(overlay, () => connectors[index], { side, rigid: true }));
+  let arms = ['left', 'right'].map((side, index) => createPresenterHose(overlay, () => connectors[index], { side, rigid: true, before: body }));
   let parked = [true, true];
   let retiring = new Map();
   let lastMoveAt = 0;
@@ -237,6 +240,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
   let pinned = false;
   let speech = { key: '', words: [], active: -1, spans: [], lastPollAt: -1e9, lastActiveAt: -1e9 };
   let speechNow = null;
+  let clockWatch = { pos: -1, movedAt: 0 };
   let mouthState = { w: MOUTH_REST[0], h: MOUTH_REST[1], opacity: 0, word: null, msPerLetter: MOUTH_LETTER_MS, clockIndex: 0 };
   let cloudState = { x: 0, y: 0, scale: 0, ready: false, width: 0, height: 0, below: false };
   let reel = 1;
@@ -517,7 +521,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     // The caption highlight only moves on the player's coarse time updates and
     // trails the voice; the narration clock (same words, read now) does not.
     let clock = speechNow;
-    if (clock && clock.playing && clock.words && clock.words.length === nodes.length) {
+    if (clock && clock.playing && clock.advancing && clock.words && clock.words.length === nodes.length) {
       let at = clock.positionMs + MOUTH_LEAD_MS;
       let index = -1;
       for (let k = 0; k < clock.words.length && clock.words[k].startMs <= at; k++) index = k;
@@ -665,7 +669,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
       // The narration clock gives the word and the point inside it every frame.
       let words = clock.words;
       let position = clock.positionMs + MOUTH_LEAD_MS;
-      speaking = Boolean(clock.playing);
+      speaking = Boolean(clock.playing && clock.advancing);
       let index = clamp(mouthState.clockIndex, 0, words.length - 1);
       while (index > 0 && words[index].startMs > position) index -= 1;
       while (index < words.length - 1 && words[index + 1].startMs <= position) index += 1;
@@ -956,7 +960,14 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     body.dataset.rigSide = plan ? plan.side : '';
     body.style.transform = `translate(${pos.x + drift}px, ${pos.y + bob}px) rotate(${tilt + (docked || media.matches ? 0 : Math.sin(time / 1100) * 3)}deg) scale(${Math.max(0.02, scale)})`;
     // Subtitles: the cloud speaks the words currently being said.
-    speechNow = typeof speechClock === 'function' ? speechClock() : null;
+    let clockRaw = typeof speechClock === 'function' ? speechClock() : null;
+    if (clockRaw) {
+      if (clockRaw.positionMs !== clockWatch.pos) {
+        clockWatch.pos = clockRaw.positionMs;
+        clockWatch.movedAt = time;
+      }
+      speechNow = { ...clockRaw, advancing: time - clockWatch.movedAt < CLOCK_STALL_MS };
+    } else speechNow = null;
     readSpeech(time);
     let talking = scale > 0 && time - speech.lastActiveAt < SPEECH_HOLD_MS;
     updateMask(time, dt, talking);

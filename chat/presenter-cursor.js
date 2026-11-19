@@ -528,7 +528,7 @@ ${overlaySelector} .pc-marquee svg{
 }
 ${overlaySelector} .pc-ants{
   fill:none;
-  stroke-width:1;
+  stroke-width:2;
   stroke-dasharray:4 4;
   shape-rendering:crispEdges;
 }
@@ -654,17 +654,18 @@ function buildMarqueeSvg(doc) {
 }
 
 function sizeMarqueeSvg(svg, rects, w, h) {
-  // Pad so the 1px stroke is not clipped at the marquee edges.
+  // Pad so the 2px stroke is not clipped at the marquee edges; the stroke lies
+  // inside the frame (centred one stroke-half from its edge).
   let pad = 2;
   svg.setAttribute('width', String(w + pad * 2));
   svg.setAttribute('height', String(h + pad * 2));
   svg.style.left = `${-pad}px`;
   svg.style.top = `${-pad}px`;
   for (let rect of rects) {
-    rect.setAttribute('x', String(pad + 0.5));
-    rect.setAttribute('y', String(pad + 0.5));
-    rect.setAttribute('width', String(Math.max(0, w - 1)));
-    rect.setAttribute('height', String(Math.max(0, h - 1)));
+    rect.setAttribute('x', String(pad + 1));
+    rect.setAttribute('y', String(pad + 1));
+    rect.setAttribute('width', String(Math.max(0, w - 2)));
+    rect.setAttribute('height', String(Math.max(0, h - 2)));
   }
 }
 

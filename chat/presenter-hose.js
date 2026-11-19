@@ -117,7 +117,7 @@ export function resolvePresenterClawPaths(closure = 0) {
 
 // `side` picks which edge of the anchor the hose leaves from: a flying body
 // carries one hose on each side.
-export default function createPresenterHose(overlay, resolveAnchor, { side = 'left', rigid = false } = {}) {
+export default function createPresenterHose(overlay, resolveAnchor, { side = 'left', rigid = false, before = null } = {}) {
   let outward = side === 'right' ? 1 : -1;
   // The claw is drawn for a hose leaving the left edge; the right arm is its
   // mirror image, so both arms share the same physics and attachment.
@@ -138,7 +138,8 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
   let id = `presenter-hose-${++nextId}`;
   // Keep the hose in the overlay's stacking context: a negative child falls
   // behind the viewport and disappears, while this source order keeps it
-  // below the cursor, marquee, ink, and click feedback.
+  // below the cursor, marquee, ink, and click feedback. A robot arm (`before`:
+  // the robot body) goes just under its body instead, so it lies above the ink.
   svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:0;pointer-events:none';
   svg.innerHTML = `<defs><filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"
     color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate"
@@ -151,7 +152,7 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
     stroke="var(--presenter-hose-accent, #ff6237)"/><path data-hose fill="none" stroke-width="7" stroke-dasharray="3 8" stroke-linecap="butt"/>
     <path data-port stroke-width="6"/><g data-arrow fill="none" stroke-width="${CLAW_FINGER_WIDTH}"><path data-claw-finger/><path data-claw-finger/>
     <circle data-claw-hinge cx="${CLAW_WRIST.x}" cy="${CLAW_WRIST.y}" r="${CLAW_HINGE_RADIUS}" fill="var(--presenter-hose-ink, #22251f)" stroke="none"/></g></g>`;
-  overlay.insertBefore(svg, overlay.firstChild);
+  overlay.insertBefore(svg, before && before.parentNode === overlay ? before : overlay.firstChild);
   let hose = svg.querySelector('[data-hose]');
   // Robot arms carry a denser stripe pattern than the player hose.
   if (rigid) hose.setAttribute('stroke-dasharray', '3 4.5');
