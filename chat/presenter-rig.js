@@ -488,6 +488,28 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
 
   // The cloud floats above the avatar (below it near the top edge), on the
   // side away from the working claw, and lags behind with a springy bob.
+  // What the presenter is marking right now (the selection frame and the ink
+  // stroke): the speech cloud must not cover it. Cached for a few frames.
+  let focusCache = { at: -1e9, zones: [] };
+  let focusZones = (time) => {
+    if (time - focusCache.at < 100) return focusCache.zones;
+    let zones = [];
+    let frame = selectionRect();
+    if (frame) zones.push({ left: frame.left, top: frame.top, right: frame.right, bottom: frame.bottom });
+    for (let path of overlay.querySelectorAll('.pc-ink path')) {
+      if (!path.getAttribute('d')) continue;
+      let box = path.getBoundingClientRect();
+      if (box.width > 4 || box.height > 4) zones.push({ left: box.left, top: box.top, right: box.right, bottom: box.bottom });
+    }
+    focusCache = { at: time, zones };
+    return zones;
+  };
+  let overlapArea = (x, y, width, height, zone, margin) => {
+    let w = Math.min(x + width / 2 + margin, zone.right) - Math.max(x - width / 2 - margin, zone.left);
+    let h = Math.min(y + height / 2 + margin, zone.bottom) - Math.max(y - height / 2 - margin, zone.top);
+    return w > 0 && h > 0 ? w * h : 0;
+  };
+
   let placeCloud = (time, dt, shown, anchor) => {
     let goalScale = shown ? 1 : 0;
     cloudState.scale = media.matches ? goalScale
@@ -511,11 +533,42 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
       ? anchor.y - BODY_RADIUS - height - 36 * unit < 8 + height
       : anchor.y - BODY_RADIUS - height - 36 * unit < 8;
     cloudState.below = wantBelow;
-    let targetX = clamp(anchor.x + sideAway * width * 0.28, width / 2 + 8, view.width - width / 2 - 8);
-    let targetY = wantBelow
-      ? anchor.y + BODY_RADIUS + 22 * unit + height / 2
-      : anchor.y - BODY_RADIUS - 22 * unit - height / 2;
-    targetY = clamp(targetY, height / 2 + 8, view.height - height / 2 - 8);
+    let fitX = (x) => clamp(x, width / 2 + 8, view.width - width / 2 - 8);
+    let fitY = (y) => clamp(y, height / 2 + 8, view.height - height / 2 - 8);
+    let above = anchor.y - BODY_RADIUS - 22 * unit - height / 2;
+    let below = anchor.y + BODY_RADIUS + 22 * unit + height / 2;
+    let near = BODY_RADIUS + 22 * unit + width / 2;
+    let preferredY = wantBelow ? below : above;
+    let otherY = wantBelow ? above : below;
+    // The preferred spot first, then the other places round the body: the cloud
+    // takes the first one that leaves the marked area uncovered.
+    let candidates = [
+      { x: anchor.x + sideAway * width * 0.28, y: preferredY },
+      { x: anchor.x - sideAway * width * 0.28, y: preferredY },
+      { x: anchor.x + sideAway * near, y: anchor.y - height * 0.2 },
+      { x: anchor.x - sideAway * near, y: anchor.y - height * 0.2 },
+      { x: anchor.x + sideAway * width * 0.28, y: otherY },
+      { x: anchor.x - sideAway * width * 0.28, y: otherY },
+    ].map((c) => ({ x: fitX(c.x), y: fitY(c.y) }));
+    let zones = focusZones(time);
+    let covered = (c) => zones.reduce((sum, zone) => sum + overlapArea(c.x, c.y, width, height, zone, 8), 0);
+    let chosen = candidates[0];
+    if (zones.length) {
+      // Keep the spot already in use while it stays clear, so the cloud does not hop.
+      let kept = candidates[cloudState.slot ?? 0];
+      if (kept && covered(kept) === 0) chosen = kept;
+      else {
+        let best = null;
+        candidates.forEach((c, index) => {
+          let area = covered(c);
+          if (!best || area < best.area - 1) best = { c, index, area };
+        });
+        chosen = best.c;
+        cloudState.slot = best.index;
+      }
+    } else cloudState.slot = 0;
+    let targetX = chosen.x;
+    let targetY = chosen.y;
     if (!cloudState.ready || media.matches) {
       cloudState.x = targetX;
       cloudState.y = targetY;
@@ -532,8 +585,15 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
     cloud.style.opacity = String(Math.min(1, cloudState.scale * 1.4));
     cloud.style.transform = `translate(${cloudState.x - width / 2}px, ${cloudState.y - height / 2 + wobble}px) scale(${overshoot * (1 + squash)}, ${overshoot * (1 - squash)})`;
     // Thought-bubble puffs trail from the avatar up to the cloud.
-    let from = { x: anchor.x, y: anchor.y + (wantBelow ? BODY_RADIUS + 6 : -BODY_RADIUS - 6) };
-    let to = { x: cloudState.x, y: cloudState.y + (wantBelow ? -height / 2 : height / 2) };
+    let toward = Math.hypot(cloudState.x - anchor.x, cloudState.y - anchor.y) || 1;
+    let from = {
+      x: anchor.x + (cloudState.x - anchor.x) / toward * (BODY_RADIUS + 6),
+      y: anchor.y + (cloudState.y - anchor.y) / toward * (BODY_RADIUS + 6),
+    };
+    let faceX = anchor.x - cloudState.x;
+    let faceY = anchor.y - cloudState.y;
+    let faceScale = Math.min((width / 2) / (Math.abs(faceX) || 1e-6), (height / 2) / (Math.abs(faceY) || 1e-6), 1);
+    let to = { x: cloudState.x + faceX * faceScale, y: cloudState.y + faceY * faceScale };
     puffs.forEach((puff, index) => {
       let t = 0.2 + index * 0.27;
       puff.style.opacity = String(Math.min(1, cloudState.scale * 1.4));
@@ -664,6 +724,9 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
           claw: claw ? { x: claw.x, y: claw.y } : null,
           clawDist: claw ? Math.hypot(claw.x - pos.x, claw.y - pos.y) : null,
           grip: gripClosed, selection: Boolean(selectionRect()), docked, drag: Boolean(drag),
+          cloud: cloudState.scale > 0.5
+            ? { x: cloudState.x, y: cloudState.y, w: cloudState.width, h: cloudState.height }
+            : null,
         };
         // A resting rig adds nothing to the log: sample only when it moved or
         // one of its discrete states changed.
@@ -671,7 +734,10 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
           || Math.hypot(sample.x - lastTraceSample.x, sample.y - lastTraceSample.y) > 2
           || (sample.clawDist !== null && Math.abs(sample.clawDist - (lastTraceSample.clawDist ?? -999)) > 2)
           || ['active', 'free', 'side', 'grip', 'selection', 'docked', 'drag']
-            .some((key) => sample[key] !== lastTraceSample[key]);
+            .some((key) => sample[key] !== lastTraceSample[key])
+          || Boolean(sample.cloud) !== Boolean(lastTraceSample.cloud)
+          || (sample.cloud && lastTraceSample.cloud
+            && Math.hypot(sample.cloud.x - lastTraceSample.cloud.x, sample.cloud.y - lastTraceSample.cloud.y) > 4);
         if (moved) {
           lastTraceSample = sample;
           trace('state', sample);
