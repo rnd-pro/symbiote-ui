@@ -34,7 +34,7 @@ const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);
 const TARGET_ICONS = ['web_asset', 'dashboard', 'tab', 'colorize'];
-const ICONS = [...new Set(['palette', 'content_copy', 'share', 'restart_alt', 'open_in_full', ...TARGET_ICONS, ...CONTROL_ICONS])];
+const ICONS = [...new Set(['palette', 'content_copy', 'share', 'restart_alt', 'open_in_full', 'close', ...TARGET_ICONS, ...CONTROL_ICONS])];
 
 function parseStoredState(value) {
   if (!value) return null;
@@ -155,6 +155,9 @@ export class CascadeThemeWidget extends Symbiote {
     },
   };
 
+    onClose: () => {
+      this.#setOpen(false);
+    },
   initCallback() {
     ensureMaterialSymbols(ICONS);
   }

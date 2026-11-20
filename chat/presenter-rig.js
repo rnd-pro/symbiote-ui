@@ -108,7 +108,10 @@ const TRACE_SAMPLE_MS = 150;
 // periodic state sample, so a bug in the motion can be read back afterwards.
 export default function createPresenterRig(overlay, resolvePlayer, {
   avatarSrc = '', onTrace = null, speechClock = null, mask: maskName = DEFAULT_MASK, onMaskChange = null,
+  isPaused = null, subtitles = true,
 } = {}) {
+  // The speech cloud is the subtitles: it hides on pause and can be switched off.
+  let subtitlesOn = subtitles !== false;
   let trace = (type, data) => { if (typeof onTrace === 'function') onTrace(type, data); };
   let lastTraceAt = 0;
   let lastTraceSample = null;
@@ -585,8 +588,8 @@ export default function createPresenterRig(overlay, resolvePlayer, {
       let index = speech.first + offset;
       let current = index === activeIndex;
       span.style.opacity = '1';
-      span.style.background = current ? 'var(--presenter-hose-accent, #ff6237)' : 'transparent';
-      span.style.color = current ? '#fff' : 'inherit';
+      span.style.background = current ? 'var(--presenter-hose-accent, var(--sn-sys-accent, #ff6237))' : 'transparent';
+      span.style.color = current ? 'var(--sn-sys-on-accent, #fff)' : 'inherit';
     });
   };
 
@@ -972,7 +975,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     let talking = scale > 0 && time - speech.lastActiveAt < SPEECH_HOLD_MS;
     updateMask(time, dt, talking);
     updateMouth(time, dt, talking);
-    placeCloud(time, dt, talking, { x: pos.x + drift, y: pos.y + bob });
+    placeCloud(time, dt, talking && subtitlesOn && !(typeof isPaused === 'function' && isPaused()), { x: pos.x + drift, y: pos.y + bob });
     // An action that ended without a planned return still draws the arm in.
     // (Never while a selection frame is still on screen: the claw that made
     // it stays on it until the show clears the frame.)
@@ -1178,6 +1181,8 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     // hovering for the next event.
     setMask(name) { return setMask(name); },
     getMask() { return maskKind; },
+    setSubtitles(on) { subtitlesOn = on !== false; },
+    getSubtitles() { return subtitlesOn; },
     planHomeReturn(from) {
       if (active === null || !pos) return Object.freeze({ durationMs: 0, destination: null });
       let plan = arms[active].planHomeReturn(from);

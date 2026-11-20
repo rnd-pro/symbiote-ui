@@ -44,6 +44,7 @@ export default html`
         </button>
         ${cascadeThemeActionButton({ action: 'reset', icon: 'restart_alt', label: 'Reset to defaults', onClick: 'onReset' })}
         ${cascadeThemeActionButton({ action: 'open-full', icon: 'open_in_full', label: 'Open theme layout', onClick: 'onOpenFull' })}
+        ${cascadeThemeActionButton({ action: 'close', icon: 'close', label: 'Close', onClick: 'onClose' })}
       </div>
     </header>
     ${cascadeThemeTargetControls({

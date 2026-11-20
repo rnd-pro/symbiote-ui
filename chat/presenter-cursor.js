@@ -3301,6 +3301,8 @@ export function createPresenterCursor(
     // attention controller opens it itself right before the hose retracts.
     // Swap the hose for the flying presenter (or back) without recreating
     // the cursor, so a running show keeps its gesture state.
+    // Subtitles of the flying presenter (its speech cloud); the hose has none.
+    setSubtitles(on) { hose?.setSubtitles?.(on); },
     setPresenterRig(options) {
       if (disposed || !resolveHoseAnchor) return;
       hose?.dispose();

@@ -139,6 +139,8 @@
     "./chat/presenter-gesture-policy.js": "./chat/presenter-gesture-policy.js",
     "./chat/presenter-marker-geometry.js": "./chat/presenter-marker-geometry.js",
     "./chat/presenter-cursor.js": "./chat/presenter-cursor.js",
+    "./chat/show-soundscape.js": "./chat/show-soundscape.js",
+    "./chat/show-soundscape-cues.js": "./chat/show-soundscape-cues.js",
     "./chat/presenter-text-selection.js": "./chat/presenter-text-selection.js",
     "./chat/chat-title-generation.js": "./chat/chat-title-generation.js",
     "./chat/workflow-summary.js": "./chat/workflow-summary.js",
