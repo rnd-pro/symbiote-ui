@@ -1247,6 +1247,8 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     present() {
       let rest = restPoint();
       if (disposed || !docked || !rest) return;
+      // Beside the player, not on it: the body would otherwise sit over the transport buttons.
+      pos = pos || { x: Math.max(BODY_RADIUS + 12, rest.x - BODY_RADIUS - 18), y: rest.y, vx: 0, vy: 0 };
       undock(rest);
       ensureLoop();
     },
