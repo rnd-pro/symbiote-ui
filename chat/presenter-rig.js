@@ -1242,6 +1242,14 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     getMask() { return maskKind; },
     // True while no arm is out: a cursor that is only held in place must not throw one.
     isIdle() { return active === null; },
+    // The presenter is on stage as soon as the show opens: it floats at its rest point with its
+    // arms in, instead of appearing only with the first gesture.
+    present() {
+      let rest = restPoint();
+      if (disposed || !docked || !rest) return;
+      undock(rest);
+      ensureLoop();
+    },
     setSubtitles(on) { subtitlesOn = on !== false; },
     getSubtitles() { return subtitlesOn; },
     planHomeReturn(from) {

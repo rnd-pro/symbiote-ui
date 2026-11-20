@@ -3313,6 +3313,7 @@ export function createPresenterCursor(
     // the cursor, so a running show keeps its gesture state.
     // Subtitles of the flying presenter (its speech cloud); the hose has none.
     setSubtitles(on) { hose?.setSubtitles?.(on); },
+    present() { hose?.present?.(); },
     setPresenterRig(options) {
       if (disposed || !resolveHoseAnchor) return;
       hose?.dispose();
