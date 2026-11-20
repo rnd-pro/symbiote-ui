@@ -123,14 +123,28 @@ export default function createPresenterRig(overlay, resolvePlayer, {
   body.setAttribute('aria-hidden', 'true');
   body.style.cssText = `position:absolute;left:0;top:0;box-sizing:border-box;pointer-events:none;
     width:${BODY_RADIUS * 2}px;height:${BODY_RADIUS * 2}px;margin:${-BODY_RADIUS}px 0 0 ${-BODY_RADIUS}px;
-    border-radius:50%;border:3px solid var(--presenter-hose-outline, #fff);opacity:0;
-    box-shadow:0 0 0 2px var(--presenter-hose-ink, #22251f), 0 6px 18px rgba(0,0,0,.28);
-    background:#22251f ${avatarSrc ? `url("${avatarSrc}")` : ''} 50% 50% / 120% no-repeat`;
+    border-radius:50%;opacity:0;
+    /* A translucent matte-white ring: the page shows through it (softly blurred), and the dark
+       outline stays. The face is clipped to the padding box, so only the ring is glass. */
+    border:3px solid color-mix(in srgb, var(--presenter-hose-outline, #fff) 66%, transparent);
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    box-shadow:0 0 0 2px var(--presenter-hose-ink, #22251f), 0 6px 18px rgba(0,0,0,.28)`;
   // Connectors where the hoses leave the body, drawn like the hose ports on
   // the claws (the body sits above the hose layer and would hide those).
+  // The photo is its own layer, so it can fade out under the face mask and let the page show through.
+  let photo = doc.createElement('span');
+  photo.style.cssText = `position:absolute;inset:0;border-radius:50%;pointer-events:none;
+    background:#22251f ${avatarSrc ? `url("${avatarSrc}")` : ''} 50% 50% / 120% no-repeat;transition:opacity .25s`;
+  body.appendChild(photo);
   let mask = doc.createElement('span');
   mask.setAttribute('data-rig-mask', 'up');
   mask.style.cssText = `position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none`;
+  // Under the frosted face: beads circle round the visor and each spoken word sets one going,
+  // its size following the word's length. They take the theme's ink (no colour of their own) and are
+  // blurred by the mask's glass, so they read as soft shapes moving behind it.
+  let orbit = doc.createElement('span');
+  orbit.style.cssText = 'position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .3s';
+  body.appendChild(orbit);
   body.appendChild(mask);
   let maskSvg = null;
   let eyeNodes = [];
@@ -140,7 +154,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
   // (Re)draws the face mask; the lifted or lowered position is kept.
   let buildMask = () => {
     mask.innerHTML = `<svg viewBox="0 0 54 54" width="100%" height="100%" aria-hidden="true"
-      style="display:block;transform:translateY(${maskState.on ? '0' : '-110%'})">${MASK_VARIANTS[maskKind].svg}</svg>`;
+      style="display:block;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);transform:translateY(${maskState.on ? '0' : '-110%'})">${MASK_VARIANTS[maskKind].svg}</svg>`;
     maskSvg = mask.firstElementChild;
     eyeNodes = [...mask.querySelectorAll('[data-eye]')];
   };
@@ -466,7 +480,11 @@ export default function createPresenterRig(overlay, resolvePlayer, {
   // the claw on the side that arm reaches from.
   let startEvent = (point, index) => {
     if (free.phase !== 'idle') releaseFree();
-    trace('start-event', { arm: index, x: point.x, y: point.y });
+    // `via` names the callers, so a surprising event point can be traced back to its gesture.
+    trace('start-event', {
+      arm: index, x: point.x, y: point.y,
+      via: String(new Error().stack || '').split('\n').slice(2, 6).map((line) => line.trim().replace(/^at\s+/, '').split(' (')[0]).join(' < '),
+    });
     centroid = { ...point };
     hintPoint = null;
     pinned = false;
@@ -583,13 +601,14 @@ export default function createPresenterRig(overlay, resolvePlayer, {
       }
       let letters = [...(texts[activeIndex] || '').toLowerCase()].filter((ch) => /\p{L}/u.test(ch));
       mouthState.word = { index: activeIndex, text: texts[activeIndex], since: time, letters };
+      spawnBead(letters.length, time);
     }
     speech.spans.forEach((span, offset) => {
       let index = speech.first + offset;
       let current = index === activeIndex;
       span.style.opacity = '1';
       span.style.background = current ? 'var(--presenter-hose-accent, var(--sn-sys-accent, #ff6237))' : 'transparent';
-      span.style.color = current ? 'var(--sn-sys-on-accent, #fff)' : 'inherit';
+      span.style.color = current ? '#fff' : 'inherit';
     });
   };
 
@@ -612,6 +631,9 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     let state = maskState.on ? 'down' : 'up';
     if (mask.getAttribute('data-rig-mask') !== state) {
       mask.setAttribute('data-rig-mask', state);
+      // Under the lowered mask the photo fades out, so the page shows through its translucent face.
+      photo.style.transitionDelay = state === 'down' ? '.12s' : '0s';
+      photo.style.opacity = state === 'down' ? '0' : '1';
       maskSvg.style.transition = media.matches ? 'none'
         : state === 'down' ? 'transform .38s cubic-bezier(.34,1.56,.64,1)' : 'transform .26s cubic-bezier(.5,0,.75,0)';
       maskSvg.style.transform = state === 'down' ? 'translateY(0)' : 'translateY(-110%)';
@@ -659,6 +681,42 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     let index = 0;
     while (index < weights.length - 1 && at >= weights[index]) { at -= weights[index]; index += 1; }
     return MOUTH_SHAPES.get(letters[index]) || MOUTH_DEFAULT;
+  };
+  // Beads of the spoken words: a ring buffer, each lives BEAD_LIFE_MS and runs round the orbit.
+  const BEAD_LIFE_MS = 2600;
+  const BEAD_SPEED = 1.5; // rad/s
+  let beads = Array.from({ length: 12 }, () => {
+    let el = doc.createElement('span');
+    el.style.cssText = 'position:absolute;left:0;top:0;border-radius:50%;opacity:0;background:color-mix(in srgb, var(--presenter-hose-ink, #22251f) 55%, transparent);will-change:transform';
+    orbit.appendChild(el);
+    return { el, born: -1, angle: 0, size: 0 };
+  });
+  let beadNext = 0;
+  let spawnBead = (letters, time) => {
+    let bead = beads[beadNext];
+    beadNext = (beadNext + 1) % beads.length;
+    // Longer words, bigger beads; they all start at the bottom and run round.
+    bead.born = time;
+    bead.angle = Math.PI / 2;
+    bead.size = Math.min(9, 2 + letters * 0.9);
+  };
+  let updateBeads = (time, dt) => {
+    orbit.style.opacity = maskState.on && scale > 0.5 ? '1' : '0';
+    let center = 27 * unit;
+    let radius = 19.5 * unit;
+    for (let bead of beads) {
+      if (bead.born < 0) continue;
+      let age = time - bead.born;
+      if (age > BEAD_LIFE_MS) { bead.born = -1; bead.el.style.opacity = '0'; continue; }
+      bead.angle += BEAD_SPEED * dt * (media.matches ? 0 : 1);
+      let life = age / BEAD_LIFE_MS;
+      let fade = life < 0.12 ? life / 0.12 : Math.min(1, (1 - life) / 0.4);
+      let size = bead.size * unit * (0.7 + 0.3 * fade);
+      bead.el.style.width = `${size}px`;
+      bead.el.style.height = `${size}px`;
+      bead.el.style.opacity = String(Math.max(0, fade));
+      bead.el.style.transform = `translate(${center + Math.cos(bead.angle) * radius - size / 2}px, ${center + Math.sin(bead.angle) * radius - size / 2}px)`;
+    }
   };
   let updateMouth = (time, dt, talking) => {
     if (media.matches) {
@@ -922,7 +980,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
       let dx = cursorPoint.x - pos.x;
       let dy = cursorPoint.y - pos.y;
       let length = Math.max(1, Math.hypot(dx, dy));
-      body.style.backgroundPosition = `${50 + dx / length * 9}% ${50 + dy / length * 9}%`;
+      photo.style.backgroundPosition =`${50 + dx / length * 9}% ${50 + dy / length * 9}%`;
     }
     body.style.opacity = String(Math.min(1, scale * 1.6));
     body.style.pointerEvents = scale > 0.6 ? 'auto' : 'none';
@@ -975,6 +1033,7 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     let talking = scale > 0 && time - speech.lastActiveAt < SPEECH_HOLD_MS;
     updateMask(time, dt, talking);
     updateMouth(time, dt, talking);
+    updateBeads(time, dt);
     placeCloud(time, dt, talking && subtitlesOn && !(typeof isPaused === 'function' && isPaused()), { x: pos.x + drift, y: pos.y + bob });
     // An action that ended without a planned return still draws the arm in.
     // (Never while a selection frame is still on screen: the claw that made
@@ -1181,6 +1240,8 @@ export default function createPresenterRig(overlay, resolvePlayer, {
     // hovering for the next event.
     setMask(name) { return setMask(name); },
     getMask() { return maskKind; },
+    // True while no arm is out: a cursor that is only held in place must not throw one.
+    isIdle() { return active === null; },
     setSubtitles(on) { subtitlesOn = on !== false; },
     getSubtitles() { return subtitlesOn; },
     planHomeReturn(from) {

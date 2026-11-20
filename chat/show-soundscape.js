@@ -508,8 +508,9 @@ export function createShowSoundscape({
       if (next === playing) return;
       playing = next;
       if (next) {
-        if (!ctx && !build()) { playing = false; return; }
-        void ctx.resume?.()?.catch?.(() => {});
+        // With the music and the sounds both off no audio context is created at all.
+        if ((musicOn || soundsOn) && !ctx && !build()) { playing = false; return; }
+        void ctx?.resume?.()?.catch?.(() => {});
         trace('play', { seed: currentSeed, bpm: track.bpm, scale: track.scaleName, root: track.root, music: musicOn });
       }
       syncClock();
@@ -551,12 +552,18 @@ export function createShowSoundscape({
     setMusic(next) {
       musicOn = Boolean(next);
       if (musicOn && playing && !ctx && !build()) return;
+      if (musicOn) void ctx?.resume?.()?.catch?.(() => {});
       syncClock();
       applyGain();
     },
     isMusic: () => musicOn,
     /** The accent sounds on or off. */
-    setSounds(next) { soundsOn = Boolean(next); applyGain(); },
+    setSounds(next) {
+      soundsOn = Boolean(next);
+      if (soundsOn && playing && !ctx && !build()) return;
+      void ctx?.resume?.()?.catch?.(() => {});
+      applyGain();
+    },
     isSounds: () => soundsOn,
     setVolume(next) { level = Math.max(0, Math.min(1, Number(next) || 0)); applyGain(); },
     isPlaying: () => playing,

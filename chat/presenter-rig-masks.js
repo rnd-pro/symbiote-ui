@@ -12,8 +12,8 @@ const astro = () => ({
   label: 'Космонавт',
   travel: 2.1,
   svg: `
-    <circle cx="27" cy="27" r="27" fill="#dcd9d2"/>
-    <circle cx="27" cy="27" r="25.6" fill="none" stroke="#a9a59c" stroke-width="1"/>
+    <circle cx="27" cy="27" r="27" fill="#f4f2ec" fill-opacity=".5"/>
+    <circle cx="27" cy="27" r="25.6" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1"/>
     <path d="M9 24 C9 14 17 9 27 9 C37 9 45 14 45 24 C45 34 40 42 27 42 C14 42 9 34 9 24 Z" fill="#17171b" stroke="#8b877e" stroke-width="1.4"/>
     <path d="M13 19.5 C15 14.5 21 12.2 27 12.2" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.5" stroke-linecap="round"/>
     <circle cx="38.5" cy="17" r="1.1" fill="#fff" fill-opacity=".35"/>

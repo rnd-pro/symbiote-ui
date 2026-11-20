@@ -3217,7 +3217,17 @@ export function createPresenterCursor(
     cursor.classList.remove('is-inking');
     gripHeld = false;
     hose?.setGrip(false);
-    if (preservedCursor) holdCursor(resolveViewport());
+    if (preservedCursor) {
+      // Keeping the cursor where it was is not a gesture: with the arm already drawn
+      // back the point is only remembered, so the arm is not thrown at a stale point.
+      if (hose?.isIdle?.()) {
+        let held = currentCursorPoint(resolveViewport());
+        cursorX = held.x;
+        cursorY = held.y;
+        cursorPositioned = true;
+        cursor.style.transform = `translate(${held.x}px, ${held.y}px)`;
+      } else holdCursor(resolveViewport());
+    }
     else if (hose) {
       cursor.style.opacity = '1';
       hose.returnHome();

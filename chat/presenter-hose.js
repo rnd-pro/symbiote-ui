@@ -140,11 +140,12 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
   // behind the viewport and disappears, while this source order keeps it
   // below the cursor, marquee, ink, and click feedback. A robot arm (`before`:
   // the robot body) goes just under its body instead, so it lies above the ink.
+  // The light outline of a robot arm is translucent, like the ring of its body: the page shows through.
   svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:0;pointer-events:none';
   svg.innerHTML = `<defs><filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"
     color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate"
-    radius="2" result="expanded"/><feFlood flood-color="var(--presenter-hose-outline, var(--presenter-hose-accent, #ff6237))"
-    result="color"/><feComposite in="color" in2="expanded" operator="in"/>
+    radius="2" result="grown"/>${rigid ? '<feGaussianBlur in="grown" stdDeviation="0.55" result="expanded"/>' : '<feOffset in="grown" result="expanded"/>'}<feFlood flood-color="var(--presenter-hose-outline, var(--presenter-hose-accent, #ff6237))"
+    flood-opacity="${rigid ? 0.68 : 1}" result="color"/><feComposite in="color" in2="expanded" operator="in"/>
     <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
     <g filter="url(#${id})" fill="var(--presenter-hose-ink, #22251f)"
     stroke="var(--presenter-hose-ink, #22251f)" stroke-linecap="round"

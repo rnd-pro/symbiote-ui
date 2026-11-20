@@ -28,8 +28,21 @@ export function watchPresenterCues(overlay, cue, sustain = () => {}) {
   const strokeStart = new WeakMap();
   const lastLength = new WeakMap();
   const visor = new Map();
+  // Layout is read at most once per element and frame: the observer fires on every
+  // drawing update, and the show must not pay a layout flush for each of them.
+  const raf = win.requestAnimationFrame?.bind(win) || ((fn) => setTimeout(fn, 16));
+  const rects = new Map();
+  const rectOf = (element) => {
+    let box = rects.get(element);
+    if (!box) {
+      box = element.getBoundingClientRect();
+      if (!rects.size) raf(() => rects.clear());
+      rects.set(element, box);
+    }
+    return box;
+  };
   const panOf = (element) => {
-    const box = element.getBoundingClientRect();
+    const box = rectOf(element);
     return panOfX(box.left + box.width / 2, win.innerWidth);
   };
 
@@ -39,7 +52,7 @@ export function watchPresenterCues(overlay, cue, sustain = () => {}) {
       if (record.type !== 'attributes' || !(target instanceof win.Element)) continue;
       if (marquee && marquee.contains(target)) {
         const shown = !marquee.classList.contains('pc-marquee-faded');
-        const box = marquee.getBoundingClientRect();
+        const box = rectOf(marquee);
         const origin = { x: box.left, y: box.top };
         // A frame is a new selection when it appears, or when a shown frame
         // restarts small somewhere else (selections in a row never fade in between).
