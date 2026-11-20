@@ -309,10 +309,10 @@ export function renderMarkdown(src, options = {}) {
       })
       // Bold: **text** or __text__
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/__(.+?)__/g, '<strong>$1</strong>')
-      // Italic: *text* or _text_
+      .replace(/(?<![\w"=/])__(.+?)__(?![\w"])/g, '<strong>$1</strong>')
+      // Italic: *text* or _text_ (an underscore inside an attribute such as target="_blank" is not emphasis)
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/_(.+?)_/g, '<em>$1</em>')
+      .replace(/(?<![\w"=/])_(.+?)_(?![\w"])/g, '<em>$1</em>')
       // Inline code: `code`
       .replace(/`([^`]+)`/g, '<code class="md-inline-code">$1</code>')
       // Strikethrough: ~~text~~

@@ -71,3 +71,12 @@ test('renderMarkdown escapes query separators exactly once in URL attributes', (
   );
   assert.doesNotMatch(html, /&amp;amp;/);
 });
+
+test('renderMarkdown keeps target="_blank" intact when several links share a line', () => {
+  const html = renderMarkdown('[Telegram](https://t.me/x) · [LinkedIn](https://example.com/y) and _italic_ __bold__');
+
+  assert.equal((html.match(/target="_blank"/g) || []).length, 2);
+  assert.doesNotMatch(html, /<em>blank|&lt;em&gt;/);
+  assert.match(html, /<em>italic<\/em>/);
+  assert.match(html, /<strong>bold<\/strong>/);
+});
